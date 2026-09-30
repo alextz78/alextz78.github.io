@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recorrido de un array</title>
+<style>
+:root{
+  --bg:#f4f6f8;
+  --panel:#ffffff;
+  --ink:#18212f;
+  --muted:#697586;
+  --line:#cfd6df;
+  --blue:#2563eb;
+  --blue-soft:#dbeafe;
+  --green:#16a34a;
+  --orange:#f59e0b;
+  --purple:#7c3aed;
+  --red:#dc2626;
+  --shadow:0 12px 35px rgba(20,35,55,.10);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  color:var(--ink);
+  background:linear-gradient(180deg,#eef3f8 0,#f8fafc 100%);
+}
+main{max-width:1220px;margin:0 auto;padding:16px 22px 42px}
+header{text-align:center;margin-bottom:22px}
+header h1{font-size:clamp(25px,4vw,38px);margin:0 0 7px}
+header p{margin:0;color:var(--muted)}
+.panel{
+  background:var(--panel);
+  border:1px solid #e3e8ef;
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  padding:22px;
+}
+.top{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:18px;
+  align-items:stretch;
+}
+h2{font-size:17px;margin:0 0 14px}
+.code{
+  background:#111827;
+  color:#e5e7eb;
+  border-radius:13px;
+  padding:16px;
+  font:15px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+.code-line{padding:2px 8px;border-radius:7px;transition:.2s}
+.code-line.active{background:#1d4ed8;color:white}
+.kw{color:#93c5fd;font-weight:700}
+.num{color:#fbbf24}
+.small{font-size:13px;color:var(--muted);margin-top:12px;line-height:1.45}
+
+.stage{
+  position:relative;
+  min-height:360px;
+  border:1px solid #e4e9ef;
+  border-radius:15px;
+  background:
+    linear-gradient(#ffffffdd,#ffffffdd),
+    repeating-linear-gradient(0deg,transparent,transparent 31px,#eef2f6 32px),
+    repeating-linear-gradient(90deg,transparent,transparent 31px,#eef2f6 32px);
+  overflow:hidden;
+  padding:22px 18px;
+}
+.marker-zone{
+  position:relative;
+  height:0;
+  margin:0;
+}
+.marker{
+  position:absolute;
+  top:2px;
+  width:56px;
+  transform:translateX(-50%);
+  text-align:center;
+  cursor:grab;
+  user-select:none;
+  touch-action:none;
+  z-index:20;
+}
+.marker:active{cursor:grabbing}
+.marker-label{
+  display:inline-grid;
+  place-items:center;
+  min-width:42px;
+  height:35px;
+  padding:0 8px;
+  border-radius:10px;
+  color:#fff;
+  font-weight:800;
+  box-shadow:0 5px 12px #0002;
+}
+.marker-arrow{
+  width:0;height:0;
+  margin:6px auto 0;
+  border-left:10px solid transparent;
+  border-right:10px solid transparent;
+  border-top:20px solid currentColor;
+}
+.m0{color:var(--blue);top:0} .m0 .marker-label{background:var(--blue)}
+.m1{color:var(--green);top:0} .m1 .marker-label{background:var(--green)}
+.m2{color:var(--orange)} .m2 .marker-label{background:var(--orange)}
+.m3{color:var(--purple)} .m3 .marker-label{background:var(--purple)}
+
+.array-zone{
+  overflow-x:auto;
+  padding:4px 8px 0;
+}
+.marker-zone-bottom{
+  position:relative;
+  height:72px;
+  margin-top:0;
+}
+.marker.bottom{
+  top:0;
+}
+.marker.bottom .marker-arrow{
+  border-top:0;
+  border-bottom:20px solid currentColor;
+  margin:0 auto 6px;
+}
+.marker.bottom .marker-label{
+  display:inline-grid;
+}
+.array{
+  display:flex;
+  justify-content:center;
+  min-width:900px;
+  gap:0;
+}
+.cell-wrap{
+  width:86px;
+  position:relative;
+  flex:0 0 86px;
+  text-align:center;
+}
+.cell{
+  height:92px;
+  border:2px solid #8e9baa;
+  border-right-width:0;
+  background:white;
+  display:grid;
+  place-items:center;
+  font-size:30px;
+  font-weight:800;
+  cursor:grab;
+  user-select:none;
+  touch-action:none;
+  transition:transform .22s,background .22s,border-color .22s,box-shadow .22s;
+}
+.cell-wrap:last-child .cell{border-right-width:2px}
+.cell:hover{background:#f8fafc}
+.cell.dragging{
+  cursor:grabbing;
+  transform:translateY(-7px) scale(1.04);
+  box-shadow:0 12px 22px #0002;
+  z-index:10;
+  position:relative;
+}
+.cell.current{
+  background:var(--blue-soft);
+  border-color:var(--blue);
+  color:#1d4ed8;
+  transform:translateY(-6px);
+  box-shadow:0 9px 18px #2563eb20;
+}
+.cell.swap-target{background:#fff7d6;border-color:#e5a400}
+.index{
+  margin-top:9px;
+  color:var(--muted);
+  font:14px ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+.status{
+  min-height:48px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  font-size:16px;
+  padding:4px 12px 0;
+}
+.status strong{color:var(--blue)}
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:9px;
+  margin-top:17px;
+}
+button{
+  border:0;
+  border-radius:10px;
+  padding:10px 15px;
+  background:#e8edf3;
+  color:#273444;
+  font-weight:750;
+  cursor:pointer;
+}
+button:hover{filter:brightness(.98)}
+button.primary{background:var(--blue);color:#fff}
+button.danger{background:#fee2e2;color:#991b1b}
+button:disabled{opacity:.45;cursor:not-allowed}
+.legend{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-top:14px;
+  color:var(--muted);
+  font-size:13px;
+}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.output{
+  margin-top:18px;
+  border-top:1px solid #edf0f4;
+  padding-top:14px;
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+}
+.output b{white-space:nowrap}
+#out{
+  font:15px ui-monospace,SFMono-Regular,Consolas,monospace;
+  color:var(--green);
+}
+footer{text-align:center;color:#8a94a3;font-size:12px;margin-top:16px}
+@media(max-width:850px){
+  .top{grid-template-columns:1fr}
+  .stage{min-height:430px}
+}
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  align-items:flex-start;
+  margin-bottom:14px;
+}
+.vars{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.varbox{
+  min-width:120px;
+  background:#0f172a;
+  color:white;
+  border-radius:14px;
+  padding:11px 16px;
+  box-shadow:0 8px 20px rgba(15,23,42,.15);
+}
+.varbox .name{
+  display:block;
+  font-size:13px;
+  color:#cbd5e1;
+  margin-bottom:2px;
+}
+.varbox .value{
+  display:block;
+  font-size:28px;
+  font-weight:900;
+  line-height:1;
+}
+.palette{
+  margin-left:auto;
+  border:1px solid #dfe5ec;
+  background:#f8fafc;
+  border-radius:14px;
+  padding:10px;
+  min-width:220px;
+}
+.palette-title{
+  font-size:12px;
+  color:#64748b;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  margin-bottom:8px;
+}
+.palette-items{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.palette-item{
+  position:relative;
+  top:auto !important;
+  left:auto !important;
+  transform:none !important;
+  width:auto;
+  cursor:grab;
+}
+.palette-item .marker-arrow{display:none}
+.palette-item .marker-label{
+  min-width:46px;
+  height:36px;
+  border-radius:9px;
+}
+.free-marker{
+  position:absolute;
+  width:56px;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  z-index:30;
+  cursor:grab;
+  user-select:none;
+  touch-action:none;
+}
+.free-marker .marker-label{
+  display:inline-grid;
+  place-items:center;
+  min-width:42px;
+  height:35px;
+  padding:0 8px;
+  border-radius:10px;
+  color:#fff;
+  font-weight:800;
+  box-shadow:0 5px 12px #0002;
+}
+.free-marker .marker-arrow{
+  width:0;height:0;
+  margin:6px auto 0;
+  border-left:9px solid transparent;
+  border-right:9px solid transparent;
+  border-top:17px solid currentColor;
+}
+
+
+.var-control{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.var-btn{
+  width:34px;
+  height:34px;
+  padding:0;
+  border-radius:9px;
+  background:#334155;
+  color:#fff;
+  font-size:22px;
+  line-height:1;
+}
+.var-btn:hover{background:#475569}
+.varbox .value{
+  min-width:34px;
+  text-align:center;
+}
+
+
+.free-marker.marker-below .marker-arrow{
+  border-top:0;
+  border-bottom:17px solid currentColor;
+  margin:0 auto 6px;
+}
+
+
+.aux-area{
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  gap:12px;
+  margin-top:42px;
+}
+.aux-label{
+  font-weight:800;
+  font-size:18px;
+  padding-top:27px;
+}
+.aux-wrap{
+  text-align:center;
+}
+.aux-cell{
+  width:100px;
+  height:92px;
+  border:2px solid #8e9baa;
+  background:#fff;
+  display:grid;
+  place-items:center;
+  font-size:30px;
+  font-weight:800;
+  border-radius:10px;
+  cursor:grab;
+  user-select:none;
+  transition:.18s;
+}
+.aux-cell.empty{
+  color:#94a3b8;
+  font-size:17px;
+  font-weight:700;
+}
+.aux-cell.drop-target,
+.cell.drop-target{
+  background:#fff7d6;
+  border-color:#e5a400;
+  box-shadow:0 0 0 3px rgba(229,164,0,.15);
+}
+.aux-caption{
+  margin-top:7px;
+  font:14px ui-monospace,SFMono-Regular,Consolas,monospace;
+  color:#64748b;
+}
+
+
+.cell:empty{
+  background:#f8fafc;
+  border-style:dashed;
+}
+
+
+.config-panel{
+  background:#ffffff;
+  border:1px solid #e3e8ef;
+  border-radius:14px;
+  box-shadow:var(--shadow);
+  padding:12px 14px;
+  margin-bottom:14px;
+}
+.config-title{
+  font-size:15px;
+  font-weight:800;
+  margin-bottom:10px;
+}
+.config-grid{
+  display:flex;
+  align-items:end;
+  gap:14px;
+  flex-wrap:nowrap;
+}
+.config-item{
+  min-width:0;
+}
+.config-item.range-config{
+  flex:1 1 360px;
+}
+.config-item.repeat-config{
+  flex:0 0 210px;
+}
+.config-item.size-config{
+  flex:0 0 160px;
+}
+.config-item label{
+  display:block;
+  font-size:12px;
+  color:#64748b;
+  font-weight:800;
+  margin-bottom:5px;
+}
+.range-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.range-row input[type="range"]{
+  width:100%;
+}
+.range-value{
+  min-width:74px;
+  text-align:center;
+  font-weight:900;
+  font-size:18px;
+  background:#f1f5f9;
+  border-radius:10px;
+  padding:7px 10px;
+}
+.config-select{
+  width:100%;
+  border:1px solid #cbd5e1;
+  border-radius:10px;
+  padding:8px 10px;
+  background:white;
+  font-weight:700;
+  color:#1f2937;
+}
+.check-row{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:38px;
+  font-weight:700;
+}
+.check-row input{
+  width:18px;
+  height:18px;
+}
+@media(max-width:900px){
+  .config-grid{flex-wrap:wrap}
+  .config-item.range-config,
+  .config-item.repeat-config,
+  .config-item.size-config{
+    flex:1 1 220px;
+  }
+}
+
+
+.marker-actions-row{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+}
+.palette{
+  min-width:auto;
+  padding:10px 12px;
+}
+.palette-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:8px;
+}
+.palette-title{
+  margin-bottom:0;
+}
+.palette-items{
+  flex-wrap:nowrap;
+}
+.palette-clear{
+  white-space:nowrap;
+  padding:8px 11px;
+}
+.change-values-btn{
+  white-space:nowrap;
+  align-self:stretch;
+}
+
+
+.change-values-btn{
+  background:#2563eb;
+  color:#fff;
+  border:1px solid #1d4ed8;
+  font-weight:800;
+}
+.change-values-btn:hover{
+  background:#1d4ed8;
+}
+.palette-clear{
+  background:#e8edf3;
+  color:#273444;
+  transition:background .18s,color .18s,border-color .18s;
+}
+.palette-clear.active{
+  background:#dc2626;
+  color:#fff;
+  border:1px solid #b91c1c;
+}
+.palette-clear.active:hover{
+  background:#b91c1c;
+}
+
+</style>
+</head>
+<body>
+<main>
+<div class="config-panel">
+  <div class="config-title">Configurar array</div>
+  <div class="config-grid">
+    <div class="config-item range-config">
+      <label for="maxValue">Rango de valores</label>
+      <div class="range-row">
+        <input type="range" id="maxValue" min="9" max="99" value="99">
+        <div class="range-value">0–<span id="maxValueLabel">99</span></div>
+      </div>
+    </div>
+
+    <div class="config-item repeat-config">
+      <label for="allowRepeat">Repetición</label>
+      <div class="check-row">
+        <input type="checkbox" id="allowRepeat" checked>
+        <span>Permitir repetidos</span>
+      </div>
+    </div>
+
+    <div class="config-item size-config">
+      <label for="arraySize">Tamaño</label>
+      <select id="arraySize" class="config-select">
+        <option value="5">5 elementos</option>
+        <option value="6">6 elementos</option>
+        <option value="7">7 elementos</option>
+        <option value="8">8 elementos</option>
+        <option value="9">9 elementos</option>
+        <option value="10" selected>10 elementos</option>
+      </select>
+    </div>
+
+    <div class="config-item" style="flex:0 0 auto">
+      <button class="primary" id="applyConfig" style="height:38px;white-space:nowrap">Aplicar configuración</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="top" style="display:block">
+  <section class="panel">
+    <div class="topbar">
+      <div>
+        <h2 style="margin-bottom:10px">Representación gráfica</h2>
+        <div class="vars">
+          <div class="varbox">
+            <span class="name">Valor de i</span>
+            <span class="value" id="ival">—</span>
+          </div>
+          <div class="varbox">
+            <span class="name">Valor de j</span>
+            <span class="value" id="jval">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="marker-actions-row">
+        <div class="palette" id="palette">
+          <div class="palette-top">
+            <div class="palette-title">Marcadores</div>
+            <button id="clearMarkers" class="palette-clear">Quitar marcadores</button>
+          </div>
+          <div class="palette-items">
+          <div class="marker palette-item m0" draggable="true" data-kind="i"><div class="marker-label">i</div></div>
+          <div class="marker palette-item m1" draggable="true" data-kind="i+1"><div class="marker-label">i+1</div></div>
+          <div class="marker palette-item m2" draggable="true" data-kind="j"><div class="marker-label">j</div></div>
+            <div class="marker palette-item m3" draggable="true" data-kind="j+1"><div class="marker-label">j+1</div></div>
+          </div>
+        </div>
+        <button id="random" class="change-values-btn">Cambiar valores</button>
+      </div>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="array-zone" style="padding-top:78px;padding-bottom:38px">
+        <div class="array" id="array"></div>
+      </div>
+
+      <div class="aux-area">
+        <div class="aux-label">aux</div>
+        <div class="aux-wrap">
+          <div class="aux-cell empty" id="auxCell" draggable="true">vacío</div>
+          
+        </div>
+      </div>
+    </div>
+</section>
+</div>
+
+<footer>Álex Torres © 2026</footer>
+</main>
+
+<script>
+let N = 10;
+let values = [];
+let draggedIndex = null;
+let auxValue = null;
+let dragSource = null;
+let manualI = null;
+let manualJ = null;
+
+const arrayEl = document.getElementById('array');
+
+
+
+function generateValues(){
+  const maxValue = Number(document.getElementById('maxValue').value);
+  const allowRepeat = document.getElementById('allowRepeat').checked;
+  N = Number(document.getElementById('arraySize').value);
+
+  if(!allowRepeat && maxValue + 1 < N){
+    alert('El rango seleccionado no contiene suficientes valores distintos para ese tamaño de array.');
+    return false;
+  }
+
+  if(allowRepeat){
+    values = Array.from({length:N},()=>Math.floor(Math.random()*(maxValue+1)));
+  }else{
+    const pool = Array.from({length:maxValue+1},(_,i)=>i);
+    for(let i=pool.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [pool[i],pool[j]]=[pool[j],pool[i]];
+    }
+    values = pool.slice(0,N);
+  }
+
+  auxValue = null;
+  manualI = null;
+  manualJ = null;
+  clearMarkers();
+  return true;
+}
+
+function renderArray(){
+  arrayEl.innerHTML = '';
+
+  values.forEach((value,index)=>{
+    const wrap = document.createElement('div');
+    wrap.className='cell-wrap';
+
+    const cell = document.createElement('div');
+    cell.className='cell';
+    cell.textContent = value === null ? '' : value;
+    cell.dataset.index=index;
+    cell.draggable = value !== null;
+
+    cell.addEventListener('dragstart', e=>{
+      if(value === null){
+        e.preventDefault();
+        return;
+      }
+      dragSource = {type:'array', index};
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain','array:'+index);
+      cell.classList.add('dragging');
+    });
+
+    cell.addEventListener('dragend', ()=>{
+      dragSource = null;
+      document.querySelectorAll('.cell,.aux-cell').forEach(c=>{
+        c.classList.remove('dragging','drop-target');
+      });
+    });
+
+    cell.addEventListener('dragover', e=>{
+      if(!dragSource) return;
+      e.preventDefault();
+      cell.classList.add('drop-target');
+    });
+
+    cell.addEventListener('dragleave', ()=>cell.classList.remove('drop-target'));
+
+    cell.addEventListener('drop', e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      cell.classList.remove('drop-target');
+
+      const target = index;
+      const data = e.dataTransfer.getData('text/plain');
+
+      if(data && data.startsWith('array:')){
+        const source = Number(data.split(':')[1]);
+        if(!Number.isInteger(source) || source === target) return;
+        if(values[source] === null || values[target] !== null) return;
+
+        values[target] = values[source];
+        values[source] = null;
+      }else if(data === 'aux'){
+        if(auxValue === null || values[target] !== null) return;
+
+        values[target] = auxValue;
+        auxValue = null;
+      }else{
+        return;
+      }
+
+      dragSource = null;
+      renderArray();
+      renderAux();
+    });
+
+    const idx = document.createElement('div');
+    idx.className='index';
+    idx.textContent='['+index+']';
+
+    wrap.appendChild(cell);
+    wrap.appendChild(idx);
+    arrayEl.appendChild(wrap);
+  });
+}
+
+function renderAux(){
+  const aux = document.getElementById('auxCell');
+  if(!aux) return;
+
+  aux.textContent = auxValue === null ? 'vacío' : auxValue;
+  aux.classList.toggle('empty', auxValue === null);
+  aux.draggable = auxValue !== null;
+
+  aux.ondragstart = e=>{
+    if(auxValue === null){
+      e.preventDefault();
+      return;
+    }
+    dragSource = {type:'aux'};
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('text/plain','aux');
+    aux.classList.add('dragging');
+  };
+
+  aux.ondragend = ()=>{
+    dragSource = null;
+    document.querySelectorAll('.cell,.aux-cell').forEach(c=>{
+      c.classList.remove('dragging','drop-target');
+    });
+  };
+
+  aux.ondragenter = e=>{
+    if(auxValue !== null) return;
+    e.preventDefault();
+    aux.classList.add('drop-target');
+  };
+
+  aux.ondragover = e=>{
+    if(auxValue !== null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect='move';
+    aux.classList.add('drop-target');
+  };
+
+  aux.ondragleave = ()=>aux.classList.remove('drop-target');
+
+  aux.ondrop = e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    aux.classList.remove('drop-target');
+
+    if(auxValue !== null) return;
+
+    const data = e.dataTransfer.getData('text/plain');
+    if(!data || !data.startsWith('array:')) return;
+
+    const source = Number(data.split(':')[1]);
+    if(!Number.isInteger(source) || source < 0 || source >= values.length) return;
+    if(values[source] === null) return;
+
+    auxValue = values[source];
+    values[source] = null;
+
+    dragSource = null;
+    renderArray();
+    renderAux();
+  };
+}
+
+const markerColors = {
+  'i':'m0',
+  'i+1':'m1',
+  'j':'m2',
+  'j+1':'m3'
+};
+
+let markerSeq = 0;
+
+function nearestArrayIndex(clientX){
+  let best = null, dist = Infinity;
+  [...arrayEl.children].forEach((cell,i)=>{
+    const r = cell.getBoundingClientRect();
+    const cx = r.left + r.width/2;
+    const d = Math.abs(clientX-cx);
+    if(d < dist){ dist=d; best=i; }
+  });
+  return best;
+}
+
+
+function moveLinkedMarker(kind, baseIndex){
+  const linkedKind = kind === 'i' ? 'i+1' : kind === 'j' ? 'j+1' : null;
+  if(!linkedKind) return;
+
+  const stage = document.getElementById('stage');
+  const linked = stage.querySelector(`.free-marker[data-kind="${linkedKind}"]`);
+  if(!linked) return;
+
+  const stageRect = stage.getBoundingClientRect();
+  let x, y, targetIndex = baseIndex + 1;
+
+  if(targetIndex < N){
+    const cell = arrayEl.children[targetIndex].getBoundingClientRect();
+    x = (cell.left + cell.width/2) - stageRect.left;
+    y = linkedKind === 'i+1'
+      ? cell.top - stageRect.top - 25
+      : cell.bottom - stageRect.top + 28;
+  }else{
+    // La posición N está justo a la derecha de la última casilla.
+    const lastCell = arrayEl.children[N - 1].getBoundingClientRect();
+    x = (lastCell.right + lastCell.width/2) - stageRect.left;
+    y = linkedKind === 'i+1'
+      ? lastCell.top - stageRect.top - 25
+      : lastCell.bottom - stageRect.top + 28;
+  }
+
+  linked.style.left = x + 'px';
+  linked.style.top = y + 'px';
+  linked.dataset.index = targetIndex;
+}
+
+function snapFreeMarker(m, clientX, clientY){
+  const stage = document.getElementById('stage');
+  const stageRect = stage.getBoundingClientRect();
+  const idx = nearestArrayIndex(clientX);
+  if(idx === null) return;
+
+  const cell = arrayEl.children[idx].getBoundingClientRect();
+  const kind = m.dataset.kind;
+
+  const x = (cell.left + cell.width/2) - stageRect.left;
+  let y;
+
+  if(kind === 'i' || kind === 'i+1'){
+    y = cell.top - stageRect.top - 25;
+  }else{
+    y = cell.bottom - stageRect.top + 28;
+  }
+
+  m.style.left = x + 'px';
+  m.style.top = y + 'px';
+  m.dataset.index = idx;
+
+  if(kind === 'i'){
+    manualI = idx;
+    moveLinkedMarker('i', idx);
+  }else if(kind === 'j'){
+    manualJ = idx;
+    moveLinkedMarker('j', idx);
+  }
+  updateValues();
+}
+
+function createFreeMarker(kind, x, y){
+  const stage = document.getElementById('stage');
+
+  // Only one marker of each kind at a time.
+  const existing = stage.querySelector(`.free-marker[data-kind="${kind}"]`);
+  if(existing) existing.remove();
+
+  const m = document.createElement('div');
+  m.className = 'free-marker ' + markerColors[kind] + ((kind === 'j' || kind === 'j+1') ? ' marker-below' : '');
+  m.dataset.kind = kind;
+  m.dataset.id = ++markerSeq;
+  m.style.left = x + 'px';
+  m.style.top = y + 'px';
+  m.innerHTML = (kind === 'j' || kind === 'j+1')
+    ? `<div class="marker-arrow"></div><div class="marker-label">${kind}</div>`
+    : `<div class="marker-label">${kind}</div><div class="marker-arrow"></div>`;
+  stage.appendChild(m);
+  updateClearMarkersButton();
+
+  m.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    m.setPointerCapture(e.pointerId);
+    m.dataset.dragging = '1';
+  });
+  m.addEventListener('pointermove', e=>{
+    if(m.dataset.dragging !== '1') return;
+    const r = stage.getBoundingClientRect();
+    const x2 = Math.max(24, Math.min(r.width-24, e.clientX-r.left));
+    const y2 = Math.max(24, Math.min(r.height-24, e.clientY-r.top));
+    m.style.left = x2 + 'px';
+    m.style.top = y2 + 'px';
+  });
+  m.addEventListener('pointerup', e=>{
+    m.dataset.dragging = '0';
+    snapFreeMarker(m, e.clientX, e.clientY);
+  });
+
+  const rect = stage.getBoundingClientRect();
+  snapFreeMarker(m, rect.left + x, rect.top + y);
+}
+
+function enablePalette(){
+  document.querySelectorAll('.palette-item').forEach(item=>{
+    item.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('text/plain', item.dataset.kind);
+      e.dataTransfer.effectAllowed='copy';
+    });
+  });
+
+  const stage = document.getElementById('stage');
+  stage.addEventListener('dragover', e=>{
+    const data = e.dataTransfer.types.includes('text/plain');
+    if(!data) return;
+    e.preventDefault();
+  });
+  stage.addEventListener('drop', e=>{
+    e.preventDefault();
+    const kind = e.dataTransfer.getData('text/plain');
+    if(!['i','i+1','j','j+1'].includes(kind)) return;
+    const r = stage.getBoundingClientRect();
+    createFreeMarker(kind, e.clientX-r.left, e.clientY-r.top);
+  });
+}
+
+
+function updateClearMarkersButton(){
+  const btn = document.getElementById('clearMarkers');
+  const hasMarkers = document.querySelector('.free-marker') !== null;
+  btn.classList.toggle('active', hasMarkers);
+}
+
+function clearMarkers(){
+  document.querySelectorAll('.free-marker').forEach(m=>m.remove());
+  manualI = null;
+  manualJ = null;
+  updateValues();
+  updateClearMarkersButton();
+}
+
+function updateValues(){
+  document.getElementById('ival').textContent = manualI === null ? '—' : manualI;
+  document.getElementById('jval').textContent = manualJ === null ? '—' : manualJ;
+}
+
+
+document.getElementById('random').onclick=()=>{
+  if(!generateValues()) return;
+  renderArray();
+  renderAux();
+  updateValues();
+};
+
+document.getElementById('clearMarkers').onclick=clearMarkers;
+
+
+
+
+
+document.getElementById('maxValue').addEventListener('input', e=>{
+  document.getElementById('maxValueLabel').textContent = e.target.value;
+});
+
+
+document.getElementById('applyConfig').addEventListener('click', ()=>{
+  if(!generateValues()) return;
+  renderArray();
+  renderAux();
+  updateValues();
+});
+
+generateValues();
+renderArray();
+renderAux();
+enablePalette();
+updateValues();
+updateClearMarkersButton();
+</script>
+</body>
+</html>
